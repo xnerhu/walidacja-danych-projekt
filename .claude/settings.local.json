@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm bazed run:*)",
+      "Bash(dir:*)",
+      "Bash(pnpm bazed:*)",
+      "Bash(python:*)",
+      "Bash(set:*)",
+      "Bash(set PYTHONUTF8=1:*)"
+    ]
+  }
+}
