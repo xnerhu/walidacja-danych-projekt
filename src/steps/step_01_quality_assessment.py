@@ -826,3 +826,21 @@ def run_quality_assessment(
     print(f"   Coverage stats: {coverage_path}")
 
     return report_path
+
+
+if __name__ == "__main__":
+    from steps.step_00_download import (
+        get_owid_co2_dataset,
+        get_sustainable_energy_dataset,
+        get_countries_of_world_dataset,
+    )
+
+    print("=" * 60)
+    print("Step 01: Quality Assessment")
+    print("=" * 60)
+
+    ds_owid = get_owid_co2_dataset()
+    ds_energy = get_sustainable_energy_dataset()
+    ds_countries = get_countries_of_world_dataset()
+
+    run_quality_assessment(ds_owid, ds_energy, ds_countries)

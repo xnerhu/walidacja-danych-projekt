@@ -7,3 +7,18 @@ pythonEntry("main", {
   main: "main.py",
   deps: ["//:env", ":src_py"],
 });
+
+pythonEntry("step_0", {
+  main: "steps/step_00_download.py",
+  deps: ["//:env", ":src_py"],
+});
+
+pythonEntry("step_1", {
+  main: "steps/step_01_quality_assessment.py",
+  deps: ["//:env", ":src_py"],
+});
+
+pythonEntry("step_2", {
+  main: "steps/step_02_cleaning.py",
+  deps: ["//:env", ":src_py"],
+});
