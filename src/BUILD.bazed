@@ -1,0 +1,9 @@
+fileSet("src_py", {
+  srcs: [glob("**/*.py")],
+  deps: [],
+});
+
+pythonEntry("main", {
+  main: "main.py",
+  deps: ["//:env", ":src_py"],
+});

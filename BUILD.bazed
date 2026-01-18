@@ -1,9 +1,31 @@
-fileSet("src_py", {
-  srcs: [glob("**/*.py")],
-  deps: [],
-});
+execute("kill", (ctx) => ({
+  command: [
+    `TASKKILL /F /IM "python.exe"`,
+    `TASKKILL /F /IM "gpu_stats.exe"`,
+    `TASKKILL /F /IM "wandb-core"`,
+  ].join(" && "),
+  cwd: ctx.workspacePath,
+  run: true,
+}));
 
-pythonEntry("main", {
-  main: "src/main.py",
-  deps: [":src_py"],
+env("env", {
+  object: {
+    HF_HUB_ENABLE_HF_TRANSFER: "1",
+    PYTHONWARNINGS: "ignore",
+    // [GPU performance tips](https://docs.jax.dev/en/latest/gpu_performance_tips.html#xla-performance-flags)
+    // [Horizontal Scaling of LLM Training with JAX](https://static.rainfocus.com/nvidia/gtcs25/sess/1728073363553001mzFs/FinalPresPDF/S73266%20_%20Horizontal%20Scaling%20of%20LLM%20Training%20with%20JAX_1742516812327001pRhl.pdf)
+    TF_GPU_ALLOCATOR: "cuda_malloc_async",
+    XLA_PYTHON_CLIENT_PREALLOCATE: "false",
+    JAX_ENABLE_PGLE: "true",
+    // JAX_DISABLE_JIT: "true",
+    XLA_FLAGS: [
+      "--xla_gpu_triton_gemm_any=true",
+      "--xla_gpu_enable_latency_hiding_scheduler=true",
+      "--xla_gpu_autotune_level=2",
+      // "--xla_gpu_threshold_for_windowed_einsum_mib",
+      "--xla_gpu_enable_pipelined_all_gather=true",
+      "--xla_gpu_enable_pipelined_reduce_scatter=true",
+      // "--xla_gpu_enable_triton_softmax_fusion=true",
+    ].join(" "),
+  },
 });
