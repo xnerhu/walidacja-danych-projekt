@@ -41,434 +41,229 @@ Prezentacja powinna trwać maksymalnie 10 min., a dyskusja 5 min. (przekroczenie
 
 ## Szczegółowy plan analizy
 
-### 1. POZYSKANIE DANYCH (Data Acquisition)
+## Temat: **Wpływ rozwoju gospodarczego na emisję CO2 i transformację energetyczną**
 
-#### 1.1 NASA POWER (dane pogodowe)
-
-| Element | Opis |
-|---------|------|
-| Źródło | HuggingFace: `notadib/NASA-Power-Daily-Weather` |
-| Okres | 1984-2022 (ograniczymy do **1992-2020** dla spójności z pożarami) |
-| Region | USA (filtrujemy tylko punkty z USA) |
-| Liczba zmiennych | 31 |
-| Format wejściowy | CSV/Parquet via HuggingFace datasets |
-
-#### 1.2 US Wildfires FPA-FOD (dane o pożarach)
-
-| Element | Opis |
-|---------|------|
-| Źródło | Kaggle: `behroozsohrabi/us-wildfire-records-6th-edition` |
-| Okres | 1992-2020 |
-| Region | USA |
-| Liczba rekordów | ~2.3 miliona |
-| Format wejściowy | SQLite |
+**Kategorie:** Gospodarka + Ochrona środowiska
 
 ---
 
-### 2. OCENA JAKOŚCI DANYCH (Data Quality Assessment)
+## 🎯 Pytania badawcze
 
-#### 2.1 Ocena źródeł
+### Główne pytanie
+>
+> **Jak poziom rozwoju gospodarczego kraju (PKB per capita) wpływa na emisję CO2 i udział energii odnawialnej w miksie energetycznym?**
 
-| Kryterium | NASA POWER | US Wildfires |
-|-----------|-----------|--------------|
-| **Wiarygodność** | NASA - agencja rządowa, dane satelitarne | USDA Forest Service - oficjalne raporty |
-| **Metodologia** | Modele asymilacyjne + satelity | Raporty federalne, stanowe, lokalne |
-| **Dokumentacja** | Pełna dokumentacja API | Publikacja naukowa (Short, 2014) |
-| **Aktualizacje** | Regularne | 6 edycji (ostatnia 2022) |
-| **Ograniczenia** | Rozdzielczość gridowa (nie punktowa) | Brak małych pożarów z prywatnych terenów |
+### Pytania szczegółowe
 
-#### 2.2 Kompletność danych
-
-- Zliczenie rekordów per rok/miesiąc
-- Identyfikacja luk czasowych
-- Sprawdzenie pokrycia geograficznego
-
-#### 2.3 Spójność danych
-
-- Walidacja zakresów wartości (np. temperatura -50°C do +50°C)
-- Sprawdzenie jednostek
-- Wykrycie niespójności logicznych (np. CONT_DATE < DISCOVERY_DATE)
+| Nr | Pytanie | Typ analizy |
+|----|---------|-------------|
+| 1 | **Czy istnieje krzywa środowiskowa Kuznetsa (EKC)?** — Czy emisje CO2 per capita rosną wraz z PKB per capita do pewnego punktu, a następnie spadają? | Regresja nieliniowa (kwadratowa) |
+| 2 | **Jakie czynniki strukturalne** (urbanizacja, dostęp do elektryczności, intensywność energetyczna) najsilniej różnicują kraje o podobnym PKB pod względem emisji CO2? | Regresja wieloraka, analiza skupień |
+| 3 | **Czy tempo wzrostu PKB wpływa na tempo transformacji energetycznej** (wzrost udziału OZE)? | Analiza panelowa, korelacja zmian |
+| 4 | **Jak region geograficzny moderuje związek między rozwojem a emisjami?** | Analiza interakcji, porównania grupowe |
+| 5 | **Które źródła emisji CO2** (węgiel, ropa, gaz, cement) dominują na różnych poziomach rozwoju gospodarczego? | Analiza struktury, wizualizacja |
 
 ---
 
-### 3. ANALIZA BRAKÓW DANYCH (Missing Data Analysis)
+## 📁 Datasety
 
-#### 3.1 NASA POWER
+### Dataset 1 (główny): OWID CO2 Data
 
-| Analiza | Opis |
-|---------|------|
-| Zliczenie braków | Per zmienna i per rok |
-| Wzorce braków | MCAR vs MAR vs MNAR |
-| Wizualizacja | Macierz braków (missingno), heatmapa |
-| Korelacja z czasem | Czy braki częstsze w określonych okresach? |
-| Korelacja z lokalizacją | Czy braki częstsze w określonych regionach? |
+| Cecha | Wartość |
+|-------|---------|
+| Źródło | Our World in Data (GitHub) |
+| Link | <https://github.com/owid/co2-data> |
+| Plik | `owid-co2-data.csv` |
+| Zakres czasowy | 1750–2023 |
+| Liczba krajów | ~200 |
+| Liczba zmiennych | ~79 |
 
-#### 3.2 US Wildfires
+**Kluczowe zmienne:**
 
-| Zmienna | Oczekiwane braki | Analiza |
-|---------|------------------|---------|
-| `DISCOVERY_TIME` | ~50% | Czy brak wpływa na analizę? |
-| `CONT_DATE` | ~40% | Pożary nadal aktywne vs brak danych |
-| `COUNTY` | ~30% | Możliwość uzupełnienia z lat/lon |
-| `FIRE_NAME` | ~50% | Małe pożary bez nazwy |
-
-#### 3.3 Strategie imputacji
-
-- **Usunięcie** - dla zmiennych z >50% braków (opcjonalnie)
-- **Interpolacja czasowa** - dla danych pogodowych (średnia z sąsiednich dni)
-- **Interpolacja przestrzenna** - dla danych pogodowych (średnia z sąsiednich punktów)
-- **Mediana/średnia** - dla zmiennych numerycznych
-- **Moda** - dla zmiennych kategorycznych
-- **KNN Imputer** - dla złożonych wzorców
+- `country`, `year`, `iso_code` — identyfikatory
+- `population`, `gdp` — dane demograficzne i ekonomiczne
+- `co2`, `co2_per_capita`, `co2_per_gdp` — emisje CO2
+- `coal_co2`, `oil_co2`, `gas_co2`, `cement_co2` — emisje według źródła
+- `primary_energy_consumption`, `energy_per_capita` — zużycie energii
+- `methane`, `nitrous_oxide` — inne gazy cieplarniane
 
 ---
 
-### 4. CZYSZCZENIE I ŁĄCZENIE DANYCH (Data Cleaning & Merging)
+### Dataset 2: Global Data on Sustainable Energy
 
-#### 4.1 Czyszczenie NASA POWER
+| Cecha | Wartość |
+|-------|---------|
+| Źródło | Kaggle |
+| Link | <https://www.kaggle.com/datasets/anshtanwar/global-data-on-sustainable-energy> |
+| Plik | `global-data-on-sustainable-energy.csv` |
+| Zakres czasowy | 2000–2020 |
+| Liczba zmiennych | ~21 |
 
-| Operacja | Szczegóły |
-|----------|-----------|
-| Filtrowanie regionu | Tylko punkty z USA (lat: 24-50, lon: -125 do -66) |
-| Filtrowanie czasu | 1992-01-01 do 2020-12-31 |
-| Korekta typów | Daty, numeryczne, kategoryczne |
-| Usunięcie duplikatów | Po (lat, lon, date) |
-| Standaryzacja nazw | Ujednolicenie nazw kolumn |
+**Kluczowe zmienne:**
 
-#### 4.2 Czyszczenie US Wildfires
-
-| Operacja | Szczegóły |
-|----------|-----------|
-| Ekstrakcja z SQLite | Wybór potrzebnych kolumn |
-| Konwersja dat | Julian date → datetime |
-| Walidacja współrzędnych | Usunięcie rekordów poza USA |
-| Kategoryzacja | STAT_CAUSE_CODE → kategorie tekstowe |
-| Usunięcie duplikatów | Po FOD_ID |
-
-#### 4.3 Łączenie datasetów ⭐
-
-| Metoda | Opis |
-|--------|------|
-| **Spatial join** | Przypisanie pożaru do najbliższego punktu gridowego NASA POWER |
-| **Temporal join** | Dopasowanie danych pogodowych z dnia wykrycia pożaru (i N dni przed) |
-| **Agregacja** | Dla każdego pożaru: warunki pogodowe z dnia D, D-1, D-7, D-30 |
-
-**Klucze łączenia:**
-
-- `latitude`, `longitude` → najbliższy punkt NASA POWER (Haversine distance)
-- `discovery_date` → data w NASA POWER
+- `Entity`, `Year` — identyfikatory
+- `Access to electricity (% of population)` — dostęp do elektryczności
+- `Renewable energy share in total final energy consumption (%)` — udział OZE
+- `Electricity from renewables (TWh)` — produkcja z OZE
+- `gdp_per_capita`, `gdp_growth` — dane ekonomiczne
+- `Density`, `Land Area` — dane geograficzne
 
 ---
 
-### 5. EKSPLORACYJNA ANALIZA DANYCH (EDA)
+### Dataset 3: Countries of the World 2023
 
-#### 5.1 Statystyki opisowe
+| Cecha | Wartość |
+|-------|---------|
+| Źródło | Kaggle |
+| Link | <https://www.kaggle.com/datasets/nelgiriyewithana/countries-of-the-world-2023> |
+| Plik | `world-data-2023.csv` |
+| Typ | Dane przekrojowe (cross-sectional) |
 
-**NASA POWER - wszystkie 31 zmiennych:**
+**Kluczowe zmienne:**
 
-| Statystyka | Zmienne |
-|------------|---------|
-| Min, Max, Mean, Median, Std | Wszystkie numeryczne |
-| Kwartyle (Q1, Q3) | Wszystkie numeryczne |
-| Skośność, Kurtoza | Wszystkie numeryczne |
-| Liczba unikalnych | Zmienne kategoryczne |
-
-**US Wildfires:**
-
-| Statystyka | Zmienne |
-|------------|---------|
-| Rozkład przyczyn | `STAT_CAUSE_DESCR` |
-| Rozkład rozmiarów | `FIRE_SIZE`, `FIRE_SIZE_CLASS` |
-| Rozkład czasowy | `FIRE_YEAR`, `DISCOVERY_DOY` |
-| Rozkład przestrzenny | `STATE`, `LATITUDE`, `LONGITUDE` |
-
-#### 5.2 Rozkłady zmiennych (wizualizacje)
-
-| Typ wykresu | Zastosowanie |
-|-------------|--------------|
-| **Histogramy** | Rozkład każdej zmiennej pogodowej |
-| **Box plots** | Porównanie rozkładów między sezonami/regionami |
-| **Violin plots** | Rozkład FIRE_SIZE per przyczyna |
-| **KDE plots** | Gęstość rozkładu temperatury, opadów |
-| **Bar plots** | Liczba pożarów per przyczyna, stan, rok |
-
-#### 5.3 Analiza czasowa (trendy i sezonowość)
-
-| Analiza | Opis |
-|---------|------|
-| **Trend roczny** | Średnia temperatura, opady, liczba pożarów per rok (1992-2020) |
-| **Sezonowość** | Rozkład zmiennych per miesiąc |
-| **Dekompozycja** | Trend + sezonowość + reszta (dla wybranych zmiennych) |
-| **Sezon pożarowy** | Kiedy występuje najwięcej pożarów? (per region) |
-
-**Pytania:**
-
-- Czy temperatura rośnie w czasie? (zmiana klimatu)
-- Czy liczba pożarów rośnie w czasie?
-- Czy sezon pożarowy się wydłuża?
-
-#### 5.4 Analiza przestrzenna
-
-| Analiza | Opis |
-|---------|------|
-| **Mapy cieplne** | Średnia temperatura, opady, liczba pożarów per region |
-| **Clustering przestrzenny** | Hotspoty pożarów |
-| **Porównanie regionów** | Zachód vs Wschód USA |
-
-#### 5.5 Analiza korelacji
-
-| Macierz korelacji | Zmienne |
-|-------------------|---------|
-| **Wewnątrz NASA POWER** | Wszystkie 31 zmiennych (Pearson, Spearman) |
-| **Między datasetami** | Zmienne pogodowe vs FIRE_SIZE |
-
-**Kluczowe korelacje do zbadania:**
-
-| Zmienna 1 | Zmienna 2 | Hipoteza |
-|-----------|-----------|----------|
-| `T2M` | `FIRE_SIZE` | Wyższa temperatura → większe pożary? |
-| `PRECTOTCORR` | `FIRE_SIZE` | Mniej opadów → większe pożary? |
-| `RH2M` | `FIRE_SIZE` | Niższa wilgotność → większe pożary? |
-| `WS2M` | `FIRE_SIZE` | Silniejszy wiatr → większe pożary? |
-| `GWETPROF` | pożary | Sucha gleba → więcej pożarów? |
-| `T2M` | `ET0` | Temperatura vs ewapotranspiracja |
-| `ALLSKY_SFC_SW_DWN` | `CLOUD_AMT` | Promieniowanie vs zachmurzenie |
-
-#### 5.6 Związki między zmiennymi (szczegółowe)
-
-| Typ analizy | Opis |
-|-------------|------|
-| **Scatter plots** | T2M vs FIRE_SIZE, PRECTOTCORR vs FIRE_SIZE |
-| **Pair plots** | Wybrane grupy zmiennych |
-| **Regresja liniowa** | Preliminary relationships |
-| **Chi-square test** | STAT_CAUSE vs FIRE_SIZE_CLASS |
-| **ANOVA** | Różnice w warunkach pogodowych per przyczyna pożaru |
+- `Country` — identyfikator
+- `Urban_population` — % populacji miejskiej
+- `Agricultural Land (%)` — struktura gospodarcza
+- `Unemployment Rate`, `Tax Revenue (%)` — wskaźniki ekonomiczne
 
 ---
 
-### 6. PRZEKSZTAŁCANIE ZMIENNYCH (Feature Engineering)
+## 🔗 Plan łączenia danych
 
-#### 6.1 Nowe zmienne z NASA POWER
+```
+OWID CO2 Data                    Sustainable Energy Data
+     │                                    │
+     │ (country, year)                    │ (Entity, Year)
+     │                                    │
+     └──────────────┬─────────────────────┘
+                    │
+                    ▼
+            ┌───────────────┐
+            │  MERGED DATA  │
+            │  (2000-2020)  │
+            └───────┬───────┘
+                    │
+                    │ (country)
+                    ▼
+            ┌───────────────┐
+            │ Country Info  │
+            │ (urbanizacja) │
+            └───────────────┘
+```
 
-| Nowa zmienna | Formuła/Opis | Uzasadnienie |
-|--------------|--------------|--------------|
-| `drought_index` | f(PRECTOTCORR, ET0, GWETPROF, VAD) | Złożony wskaźnik suszy |
-| `solar_potential` | f(ALLSKY_SFC_SW_DWN, CLOUD_AMT, ALLSKY_SRF_ALB) | Potencjał energii słonecznej |
-| `fire_weather_index` | f(T2M, RH2M, WS2M, PRECTOTCORR) | Wskaźnik warunków pożarowych |
-| `heat_stress` | f(T2M, RH2M, T2MWET) | Stres cieplny |
-| `temp_range` | T2M_MAX - T2M_MIN | Amplituda dobowa |
-| `precip_deficit` | ET0 - PRECTOTCORR | Deficyt wodny |
-
-#### 6.2 Zmienne czasowe
-
-| Zmienna | Opis |
-|---------|------|
-| `year` | Rok |
-| `month` | Miesiąc (1-12) |
-| `day_of_year` | Dzień roku (1-366) |
-| `season` | Zima/Wiosna/Lato/Jesień |
-| `is_summer` | Czerwiec-Sierpień (0/1) |
-| `is_fire_season` | Maj-Październik (0/1) |
-
-#### 6.3 Zmienne opóźnione (lagged features)
-
-| Zmienna | Opis |
-|---------|------|
-| `T2M_lag7` | Średnia temperatura z ostatnich 7 dni |
-| `PRECTOTCORR_lag30` | Suma opadów z ostatnich 30 dni |
-| `drought_days` | Liczba dni bez opadów |
-| `heatwave_days` | Liczba dni z T2M > 35°C w ostatnich 14 dniach |
-
-#### 6.4 Zmienne z US Wildfires
-
-| Nowa zmienna | Formuła/Opis |
-|--------------|--------------|
-| `fire_duration` | CONT_DATE - DISCOVERY_DATE |
-| `is_large_fire` | FIRE_SIZE > 100 acres (0/1) |
-| `is_human_caused` | STAT_CAUSE_CODE != 1 (Lightning) |
-| `fire_month` | Miesiąc wykrycia |
-| `region` | Zachód/Środkowy Zachód/Południe/Północny Wschód |
-
-#### 6.5 Zmienne agregowane (per lokalizacja/czas)
-
-| Zmienna | Opis |
-|---------|------|
-| `fires_per_month` | Liczba pożarów w danym miesiącu/regionie |
-| `total_burned_area` | Suma spalonej powierzchni |
-| `avg_fire_size` | Średni rozmiar pożaru |
+**Klucz łączenia:** `country` + `year` (po standaryzacji nazw krajów)
 
 ---
 
-### 7. ANALIZA DANYCH NIETYPOWYCH (Outlier Analysis)
+## 🛠️ Plan przetwarzania danych
 
-#### 7.1 Metody detekcji
+### 1. Pozyskanie danych
 
-| Metoda | Zastosowanie |
-|--------|--------------|
-| **IQR (Interquartile Range)** | Wszystkie zmienne numeryczne |
-| **Z-score** | Zmienne o rozkładzie zbliżonym do normalnego |
-| **Modified Z-score (MAD)** | Zmienne z outlierami |
-| **Isolation Forest** | Multivariate outlier detection |
-| **DBSCAN** | Przestrzenne anomalie |
-| **LOF (Local Outlier Factor)** | Lokalne anomalie |
+- [ ] Pobranie OWID CO2 Data z GitHub
+- [ ] Pobranie Sustainable Energy z Kaggle
+- [ ] Pobranie Country Info z Kaggle
+- [ ] Dokumentacja źródeł i licencji
 
-#### 7.2 Zmienne do szczegółowej analizy outlierów
+### 2. Ocena jakości danych
 
-| Zmienna | Oczekiwane outliers | Interpretacja |
-|---------|---------------------|---------------|
-| `FIRE_SIZE` | Mega-pożary | Prawdziwe ekstremalne zdarzenia |
-| `T2M` | Ekstremalne temperatury | Fale upałów/mrozów |
-| `PRECTOTCORR` | Intensywne opady | Burze, huragany |
-| `WS2M` | Silne wiatry | Tornada, huragany |
-| `SNODP` | Ekstremalne opady śniegu | Burze śnieżne |
+- [ ] Ocena wiarygodności źródeł (OWID = agregacja oficjalnych danych)
+- [ ] Analiza kompletności czasowej i geograficznej
+- [ ] Identyfikacja potencjalnych problemów (różne nazwy krajów)
 
-#### 7.3 Analiza outlierów
+### 3. Czyszczenie i łączenie
 
-| Krok | Opis |
-|------|------|
-| 1. Identyfikacja | Lista outlierów per zmienna |
-| 2. Wizualizacja | Box plots, scatter plots |
-| 3. Weryfikacja | Czy to błąd czy prawdziwe ekstremum? |
-| 4. Kontekst | Sprawdzenie dat (np. huragan, fala upałów) |
-| 5. Decyzja | Zachować / usunąć / winsoryzować |
+- [ ] Standaryzacja nazw krajów (np. "USA" vs "United States")
+- [ ] Łączenie po kluczu `(country, year)`
+- [ ] Obsługa duplikatów i niespójności
+- [ ] Wybór wspólnego zakresu czasowego (2000–2020)
 
-#### 7.4 Strategie obsługi
+### 4. Eksploracyjna analiza danych (EDA)
 
-| Strategia | Kiedy stosować |
-|-----------|----------------|
-| **Zachowanie** | Prawdziwe ekstremalne zdarzenia (mega-pożary) |
-| **Usunięcie** | Błędy pomiarowe (np. temperatura 999°C) |
-| **Winsoryzacja** | Ograniczenie do percentyla 1-99 |
-| **Transformacja** | Log-transformacja dla skośnych rozkładów |
-| **Osobna analiza** | Ekstrema jako osobna kategoria |
+- [ ] Statystyki opisowe wszystkich zmiennych
+- [ ] Rozkłady zmiennych (histogramy, boxploty)
+- [ ] Macierz korelacji
+- [ ] Trendy czasowe (liniowe wykresy)
+- [ ] Scatterploty kluczowych zależności
 
----
+### 5. Przekształcanie zmiennych
 
-### 8. WYBÓR ZMIENNYCH I REKORDÓW (Variable & Record Selection)
+Nowe zmienne do utworzenia:
 
-#### 8.1 Filtrowanie rekordów
+| Zmienna | Formuła | Cel |
+|---------|---------|-----|
+| `co2_per_capita_log` | log(co2_per_capita) | Normalizacja rozkładu |
+| `gdp_per_capita_log` | log(gdp_per_capita) | Normalizacja rozkładu |
+| `gdp_per_capita_sq` | gdp_per_capita² | Test krzywej Kuznetsa |
+| `renewable_share_change` | Δ renewable_share (rok do roku) | Tempo transformacji |
+| `co2_change_rate` | Δ co2 / co2 (%) | Dynamika emisji |
+| `development_level` | Kwartyle PKB per capita | Kategoryzacja krajów |
+| `region` | Mapowanie ISO → kontynent | Analiza regionalna |
+| `fossil_share` | (coal + oil + gas) / total CO2 | Struktura emisji |
 
-| Filtr | Uzasadnienie |
-|-------|--------------|
-| Okres: 1992-2020 | Nakładający się okres obu datasetów |
-| Region: Kontynentalne USA | Wykluczenie Alaski, Hawajów (inne klimaty) |
-| Kompletność | Rekordy z <20% braków |
-| Jakość | Wykluczenie błędnych rekordów |
+### 6. Analiza danych nietypowych
 
-#### 8.2 Selekcja zmiennych dla pytań badawczych
+- [ ] Identyfikacja outlierów (IQR, Z-score)
+- [ ] Analiza przypadków ekstremalnych:
+  - Katar, Kuwejt — bardzo wysokie emisje per capita
+  - Norwegia, Islandia — wysokie PKB, niskie emisje
+  - Chiny, Indie — duże całkowite emisje, niskie per capita
+- [ ] Decyzja o obsłudze outlierów (usunięcie vs winsoryzacja)
 
-**Pytanie 1: Ryzyko suszy**
+### 7. Analiza braków danych
 
-| Zmienna | Typ | Rola |
-|---------|-----|------|
-| `PRECTOTCORR` | NASA POWER | Predictor |
-| `ET0` | NASA POWER | Predictor |
-| `GWETPROF` | NASA POWER | Predictor |
-| `VAD` | NASA POWER | Predictor |
-| `T2M` | NASA POWER | Predictor |
-| `drought_index` | Engineered | Target/Predictor |
+- [ ] Mapa braków danych (heatmapa)
+- [ ] Analiza wzorców braków (MCAR, MAR, MNAR)
+- [ ] Identyfikacja krajów/lat z największymi brakami
+- [ ] Strategia imputacji:
+  - Interpolacja czasowa dla szeregów czasowych
+  - Mediana grupowa (według regionu) dla danych przekrojowych
+  - Multiple imputation dla analizy wrażliwości
 
-**Pytanie 2: Potencjał solarny**
+### 8. Wybór zmiennych i rekordów
 
-| Zmienna | Typ | Rola |
-|---------|-----|------|
-| `ALLSKY_SFC_SW_DWN` | NASA POWER | Predictor/Target |
-| `ALLSKY_SFC_PAR_TOT` | NASA POWER | Predictor |
-| `CLOUD_AMT` | NASA POWER | Predictor |
-| `ALLSKY_SRF_ALB` | NASA POWER | Predictor |
-| `solar_potential` | Engineered | Target |
+**Kryteria wykluczenia:**
 
-**Pytanie 3: Zapotrzebowanie energetyczne**
+- Kraje z >30% brakujących danych
+- Lata spoza zakresu 2000–2020
+- Agregaty regionalne (np. "World", "Europe")
 
-| Zmienna | Typ | Rola |
-|---------|-----|------|
-| `CDD18_3` | NASA POWER | Target |
-| `HDD18_3` | NASA POWER | Target |
-| `T2M`, `T2M_MAX`, `T2M_MIN` | NASA POWER | Predictors |
+**Zmienne do finalnego zbioru:**
 
-**Pytanie 4: Przewidywanie pożarów** ⭐
-
-| Zmienna | Źródło | Rola |
-|---------|--------|------|
-| `FIRE_SIZE` | Wildfires | Target |
-| `is_large_fire` | Engineered | Target (klasyfikacja) |
-| `T2M`, `T2M_MAX` | NASA POWER | Predictor |
-| `PRECTOTCORR` | NASA POWER | Predictor |
-| `RH2M` | NASA POWER | Predictor |
-| `WS2M` | NASA POWER | Predictor |
-| `GWETPROF` | NASA POWER | Predictor |
-| `drought_index` | Engineered | Predictor |
-| `fire_weather_index` | Engineered | Predictor |
-| `STAT_CAUSE_CODE` | Wildfires | Predictor |
-| `season`, `month` | Engineered | Predictor |
-
-#### 8.3 Analiza współliniowości
-
-| Analiza | Próg |
-|---------|------|
-| Macierz korelacji | r > 0.8 → potencjalny problem |
-| VIF (Variance Inflation Factor) | VIF > 5 → usunięcie zmiennej |
-| PCA | Redukcja wymiarowości (opcjonalnie) |
-
-#### 8.4 Ranking ważności zmiennych
-
-| Metoda | Opis |
-|--------|------|
-| Korelacja z targetem | Prosty ranking |
-| Mutual Information | Nieliniowe zależności |
-| Random Forest Feature Importance | Wstępny model |
-| Permutation Importance | Bardziej wiarygodne |
+| Kategoria | Zmienne |
+|-----------|---------|
+| Identyfikatory | country, year, iso_code, region |
+| Zmienna zależna | co2_per_capita, renewable_share |
+| Zmienne niezależne | gdp_per_capita, gdp_growth, urbanization, energy_intensity, access_electricity |
+| Kontrolne | population, land_area, latitude |
 
 ---
 
-### 9. FINALNE ZBIORY DANYCH (Final Datasets)
+## 📈 Oczekiwane wyniki
 
-#### 9.1 Dataset: `drought_analysis.csv`
+### Zbiór danych końcowy
 
-- Dane dzienne NASA POWER dla USA
-- Zmienne związane z suszą
-- ~X milionów rekordów
+- **~150 krajów** × **21 lat** (2000–2020) = ~3000 obserwacji
+- **~15-20 zmiennych** (po selekcji)
+- Format: CSV + dokumentacja (codebook)
 
-#### 9.2 Dataset: `solar_potential.csv`
+### Gotowość do modelowania
 
-- Dane NASA POWER agregowane per region/miesiąc
-- Zmienne związane z energią słoneczną
-- ~X tysięcy rekordów
-
-#### 9.3 Dataset: `fire_prediction.csv` ⭐
-
-- Połączone dane pożarów + warunki pogodowe
-- Każdy rekord = 1 pożar + warunki z dnia wykrycia
-- ~2 miliony rekordów
-
-#### 9.4 Dataset: `full_merged.csv`
-
-- Pełny dataset do dalszych analiz
-- Wszystkie zmienne
-
-#### 9.5 Podział train/test
-
-| Zbiór | Opis |
-|-------|------|
-| Train | 1992-2016 (80%) |
-| Test | 2017-2020 (20%) |
-
-*Podział czasowy, nie losowy - symulacja real-world scenario*
+- [ ] Dane oczyszczone i połączone
+- [ ] Braki danych obsłużone
+- [ ] Outliers zidentyfikowane i opisane
+- [ ] Zmienne przekształcone i gotowe do analizy
+- [ ] Dokumentacja wszystkich kroków
 
 ---
 
-### 10. PODSUMOWANIE ANALIZ W RAPORCIE
+## 📚 Struktura raportu
 
-| Sekcja raportu | Zawartość |
-|----------------|-----------|
-| 1. Wprowadzenie | Cel, pytania badawcze, źródła danych |
-| 2. Pozyskanie danych | Opis procesu pobierania |
-| 3. Ocena jakości | Tabele z oceną źródeł |
-| 4. Braki danych | Wizualizacje, wzorce, imputacja |
-| 5. Czyszczenie | Operacje, liczba usuniętych rekordów |
-| 6. Łączenie | Metodologia, statystyki dopasowania |
-| 7. EDA | Kluczowe wykresy i wnioski |
-| 8. Feature engineering | Nowe zmienne, uzasadnienie |
-| 9. Outliers | Wykryte anomalie, decyzje |
-| 10. Selekcja | Finalne zmienne per pytanie |
-| 11. Podsumowanie | Gotowość danych do modelowania |
+1. **Wstęp** — temat, pytania badawcze, uzasadnienie
+2. **Źródła danych** — opis datasetów, ocena jakości
+3. **Czyszczenie i łączenie** — procedury, problemy, rozwiązania
+4. **EDA** — statystyki, rozkłady, korelacje, wizualizacje
+5. **Przekształcenia** — nowe zmienne, uzasadnienie
+6. **Analiza outlierów** — identyfikacja, interpretacja
+7. **Analiza braków** — wzorce, imputacja
+8. **Finalny zbiór danych** — opis, codebook
+9. **Podsumowanie** — wnioski, ograniczenia
