@@ -118,7 +118,7 @@ class ReportBuilder:
         df: pd.DataFrame,
         caption: Optional[str] = None,
         max_rows: Optional[int] = None,
-        float_format: str = ":.2f",
+        float_format: int = 2,
     ) -> "ReportBuilder":
         """
         Add DataFrame as Markdown table.
@@ -127,7 +127,7 @@ class ReportBuilder:
             df: DataFrame to display
             caption: Table caption
             max_rows: Maximum rows to display (truncates if exceeded)
-            float_format: Format string for floats
+            float_format: Number of decimal places for floats
         """
         self._table_count += 1
 
@@ -144,9 +144,9 @@ class ReportBuilder:
             truncated = False
 
         # Format floats
-        for col in display_df.select_dtypes(include=[np.number]).columns:
+        for col in display_df.select_dtypes(include=["float"]).columns:
             display_df[col] = display_df[col].apply(
-                lambda x: f"{x:{float_format}}" if pd.notna(x) else ""
+                lambda x, fmt=float_format: f"{x:.{fmt}f}" if pd.notna(x) else ""
             )
 
         table_md = display_df.to_markdown(index=False)
