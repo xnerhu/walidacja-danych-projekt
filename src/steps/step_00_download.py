@@ -170,20 +170,3 @@ def get_countries_of_world_dataset(
     print(f"Saved Countries of the World 2023 dataset to {cache_path}")
 
     return ds
-
-
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Step 00: Downloading datasets")
-    print("=" * 60)
-
-    ds_owid = get_owid_co2_dataset()
-    print(f"  OWID CO2: {ds_owid}")
-
-    ds_energy = get_sustainable_energy_dataset()
-    print(f"  Sustainable Energy: {ds_energy}")
-
-    ds_countries = get_countries_of_world_dataset()
-    print(f"  Countries 2023: {ds_countries}")
-
-    print("\n✅ All datasets downloaded successfully!")
